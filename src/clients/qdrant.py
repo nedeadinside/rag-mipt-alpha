@@ -132,10 +132,12 @@ class LocalQdrantStore(LocalQdrantBase):
             return
         self._client.create_collection(
             collection_name=name,
-            vectors_config=VectorParams(
-                size=len(self._embedder.embed_text(["probe"])[0]),
-                distance=Distance.COSINE,
-            ),
+            vectors_config={
+                self._DENSE: VectorParams(
+                    size=len(self._embedder.embed_text(["probe"])[0]),
+                    distance=Distance.COSINE,
+                ),
+            },
         )
 
     def upsert(self, collection: str, chunks: Iterable[DocumentChunk]) -> None:
@@ -154,7 +156,7 @@ class LocalQdrantStore(LocalQdrantBase):
         points = [
             PointStruct(
                 id=c.id,
-                vector=v,
+                vector={self._DENSE: v},
                 payload=c.model_dump(exclude={"score"}),
             )
             for c, v in zip(materialized, vectors, strict=True)
@@ -176,6 +178,7 @@ class LocalQdrantStore(LocalQdrantBase):
         response = self._client.query_points(
             collection_name=collection,
             query=vector,
+            using=self._DENSE,
             limit=top_k,
             with_payload=True,
         )
@@ -195,16 +198,9 @@ class LocalQdrantStore(LocalQdrantBase):
         self._assert_exists(collection)
 
         prefetches = [
-            Prefetch(query=self._embedder.embed_query(q), limit=top_k) for q in queries
+            self._dense_prefetch(self._embedder.embed_query(q), top_k) for q in queries
         ]
-        response = self._client.query_points(
-            collection_name=collection,
-            prefetch=prefetches,
-            query=FusionQuery(fusion=Fusion.RRF),
-            limit=top_k,
-            with_payload=True,
-        )
-        return self._to_chunks(response.points)
+        return self._rrf_search(collection, prefetches, top_k)
 
 
 class LocalHybridQdrantStore(LocalQdrantBase):
