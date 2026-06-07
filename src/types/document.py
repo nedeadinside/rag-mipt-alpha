@@ -15,6 +15,6 @@ class DocumentChunk(BaseModel):
     source_title: str | None = None
     start_index: int
     end_index: int
-    length: int
+    token_count: int
     score: float | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)

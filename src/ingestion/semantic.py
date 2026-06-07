@@ -54,7 +54,7 @@ class SemanticChunker:
                 source_title=doc.title,
                 start_index=c.start_index,
                 end_index=c.end_index,
-                length=c.token_count,
+                token_count=c.token_count,
                 metadata=metadata,
             )
             for c in refined_chunks
