@@ -46,6 +46,7 @@ class RetrievalSettings(BaseModel):
 
     prefetch_limit: int = Field(50, gt=0)
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
+    reranker_device: str = "cpu"
 
 
 @lru_cache(maxsize=1)

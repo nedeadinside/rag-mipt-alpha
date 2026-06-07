@@ -19,3 +19,4 @@ embedding:
 retrieval:
   prefetch_limit: 50
   reranker_model: BAAI/bge-reranker-v2-m3
+  reranker_device: cpu
