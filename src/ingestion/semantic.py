@@ -9,7 +9,16 @@ from src.types.source import SourceDocument
 
 
 class SemanticChunker:
+    """
+    Semantic splitter with overlap refinement over source documents.
+    """
+
     def __init__(self, settings: ChunkingSettings) -> None:
+        """
+        Initialize the chunker.
+
+        :param settings: Chunking settings.
+        """
         self._chunker = ChonkieSemanticChunker(
             embedding_model=settings.embedding_model,
             threshold=settings.threshold,
@@ -23,6 +32,12 @@ class SemanticChunker:
         )
 
     def chunk(self, doc: SourceDocument) -> list[DocumentChunk]:
+        """
+        Split a source document into refined chunks.
+
+        :param doc: Source document.
+        :return: Chunks in document order.
+        """
         if not doc.text or not doc.text.strip():
             return []
 
@@ -39,7 +54,7 @@ class SemanticChunker:
                 source_title=doc.title,
                 start_index=c.start_index,
                 end_index=c.end_index,
-                token_count=c.token_count,
+                length=c.token_count,
                 metadata=metadata,
             )
             for c in refined_chunks
