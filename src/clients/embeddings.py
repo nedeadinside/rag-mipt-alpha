@@ -36,12 +36,12 @@ class FastEmbedE5DenseEmbedder:
         return [vector.tolist() for vector in self._model.passage_embed(texts)]
 
 
-class FastEmbedBM25Embedder:
+class FastEmbedSparseEmbedder:
     """
-    Sparse BM25 embedder backed by FastEmbed.
+    Sparse embedder backed by FastEmbed.
     """
 
-    def __init__(self, model_name: str = "Qdrant/bm25", cache_dir: str | None = None) -> None:
+    def __init__(self, model_name: str, cache_dir: str | None = None) -> None:
         """
         Initialize the embedder.
 

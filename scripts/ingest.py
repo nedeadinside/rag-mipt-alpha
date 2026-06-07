@@ -4,8 +4,8 @@ from collections.abc import Iterable, Iterator
 from itertools import islice
 
 from src.clients import (
-    FastEmbedBM25Embedder,
     FastEmbedE5DenseEmbedder,
+    FastEmbedSparseEmbedder,
     LocalHybridQdrantStore,
 )
 from src.config import (
@@ -35,6 +35,9 @@ def _take(documents: Iterable[SourceDocument], limit: int | None) -> Iterator[So
 
 
 def main() -> None:
+    """
+    Run the ingestion entry point.
+    """
     parser = argparse.ArgumentParser(description="Run ingestion pipeline.")
     parser.add_argument("--limit", type=int, default=None, help="Process only first N source docs.")
     args = parser.parse_args()
@@ -50,7 +53,7 @@ def main() -> None:
     retrieval = get_retrieval_settings()
 
     dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.cache_dir)
-    sparse = FastEmbedBM25Embedder(embedding.sparse_model, embedding.cache_dir)
+    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.cache_dir)
     store = LocalHybridQdrantStore(
         path=ingestion.qdrant_path,
         dense=dense,
