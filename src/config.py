@@ -25,8 +25,8 @@ class ChunkingSettings(BaseModel):
     chunk_size: int = Field(512, gt=0)
     threshold: float = Field(0.8, gt=0, lt=1)
     embedding_model: str = "minishlab/potion-base-32M"
-    overlap_size: float = Field(0.1, gt=0)
-    overlap_method: Literal["sufix", "prefix", "justified"]
+    overlap_size: float = Field(0.1, gt=0, lt=1)
+    overlap_method: Literal["suffix", "prefix", "justified"]
 
 
 class EmbeddingSettings(BaseModel):
