@@ -5,6 +5,8 @@ from typing import Literal
 from dynaconf import Dynaconf
 from pydantic import BaseModel, Field
 
+from src.types.search_strategy import SearchStrategy
+
 
 class IngestionSettings(BaseModel):
     """
@@ -47,6 +49,27 @@ class RetrievalSettings(BaseModel):
     prefetch_limit: int = Field(50, gt=0)
     reranker_model: str = "BAAI/bge-reranker-v2-m3"
     reranker_device: str = "cpu"
+
+
+class LLMSettings(BaseModel):
+    """
+    LLM settings.
+    """
+
+    model_name: str
+    base_url: str = "http://localhost:11434"
+    temperature: float = Field(0.2, ge=0.0, le=2.0)
+
+
+class RAGSettings(BaseModel):
+    """
+    RAG pipeline settings.
+    """
+
+    top_k: int = Field(100, gt=0)
+    top_kr: int = Field(20, gt=0)
+    strategy: SearchStrategy = SearchStrategy.DEFAULT
+    prompt_name: str = "qa_rag"
 
 
 @lru_cache(maxsize=1)
@@ -102,3 +125,23 @@ def get_retrieval_settings() -> RetrievalSettings:
     :return: Retrieval settings.
     """
     return RetrievalSettings(**_load_raw().retrieval.to_dict())
+
+
+@lru_cache(maxsize=1)
+def get_llm_settings() -> LLMSettings:
+    """
+    Return validated LLM settings.
+
+    :return: LLM settings.
+    """
+    return LLMSettings(**_load_raw().llm.to_dict())
+
+
+@lru_cache(maxsize=1)
+def get_rag_settings() -> RAGSettings:
+    """
+    Return validated RAG settings.
+
+    :return: RAG settings.
+    """
+    return RAGSettings(**_load_raw().rag.to_dict())

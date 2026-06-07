@@ -20,3 +20,14 @@ retrieval:
   prefetch_limit: 50
   reranker_model: BAAI/bge-reranker-v2-m3
   reranker_device: cpu
+
+llm:
+  model_name: gemma4:31b-cloud
+  base_url: http://localhost:11434
+  temperature: 0.2
+
+rag:
+  top_k: 20
+  top_kr: 5
+  strategy: default
+  prompt_name: qa_rag
