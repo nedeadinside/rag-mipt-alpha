@@ -2,7 +2,7 @@ import logging
 from collections.abc import Iterable
 
 from src.config import IngestionSettings
-from src.ingestion.types import Chunker
+from src.types.chunker import Chunker
 from src.types.document import DocumentChunk
 from src.types.source import SourceDocument
 from src.types.vector_store import VectorStore
