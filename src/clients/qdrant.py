@@ -14,9 +14,9 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from src.clients.types import Embedder
 from src.config import RetrievalSettings
 from src.types.document import DocumentChunk
+from src.types.embedder import Embedder
 
 
 class LocalQdrantBase:

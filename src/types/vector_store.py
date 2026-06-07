@@ -5,31 +5,6 @@ from src.types.document import DocumentChunk
 
 
 @runtime_checkable
-class Embedder[VectorT](Protocol):
-    """
-    Embedder contract.
-    """
-
-    def embed_text(self, texts: list[str]) -> list[VectorT]:
-        """
-        Embed a batch of document texts.
-
-        :param texts: Document texts to embed.
-        :return: Document-side embeddings in input order.
-        """
-        ...
-
-    def embed_query(self, text: str) -> VectorT:
-        """
-        Embed a single query string.
-
-        :param text: Query text to embed.
-        :return: Query-side embedding.
-        """
-        ...
-
-
-@runtime_checkable
 class VectorStore(Protocol):
     """
     Vector store contract.
