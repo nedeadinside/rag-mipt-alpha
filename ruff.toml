@@ -1,0 +1,29 @@
+line-length = 100
+target-version = "py313"
+src = ["src", "scripts"]
+extend-exclude = [".venv", "data", ".qdrant"]
+
+[lint]
+select = [
+    "E",
+    "W",
+    "F",
+    "I",
+    "B",
+    "UP",
+    "SIM",
+    "RUF",
+    "TID",
+    "PL",
+]
+ignore = [
+    "PLR0913",
+    "E501",
+]
+
+[lint.isort]
+known-first-party = ["src"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
