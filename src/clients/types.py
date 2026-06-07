@@ -1,9 +1,7 @@
 from collections.abc import Iterable
-from typing import Protocol, TypeVar, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 from src.types.document import DocumentChunk
-
-VectorT = TypeVar("VectorT")
 
 
 @runtime_checkable
