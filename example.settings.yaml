@@ -28,7 +28,9 @@ retrieval:
 llm:
   model_name: gemma4:31b-cloud
   base_url: http://localhost:11434
-  temperature: 0.2
+  temperature: 1.0
+  top_p: 0.95
+  top_k: 64
 
 rag:
   top_k: 20

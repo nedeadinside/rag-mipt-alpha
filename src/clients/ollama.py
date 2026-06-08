@@ -7,15 +7,33 @@ class OllamaLLM:
     LLM client backed by Ollama.
     """
 
-    def __init__(self, model_name: str, base_url: str, temperature: float) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        base_url: str,
+        temperature: float,
+        top_p: float | None = None,
+        top_k: int | None = None,
+    ) -> None:
         """
         Initialize the client.
 
         :param model_name: Ollama model identifier.
         :param base_url: Ollama server base URL.
         :param temperature: Sampling temperature.
+        :param top_p: Nucleus sampling cutoff; None keeps server default.
+        :param top_k: Top-k sampling cutoff; None keeps server default.
         """
-        self._model = ChatOllama(model=model_name, base_url=base_url, temperature=temperature)
+        kwargs: dict[str, object] = {
+            "model": model_name,
+            "base_url": base_url,
+            "temperature": temperature,
+        }
+        if top_p is not None:
+            kwargs["top_p"] = top_p
+        if top_k is not None:
+            kwargs["top_k"] = top_k
+        self._model = ChatOllama(**kwargs)
 
     def invoke(self, messages: list[BaseMessage]) -> str:
         """
