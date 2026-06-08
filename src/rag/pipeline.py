@@ -3,7 +3,7 @@ import logging
 from langchain_core.messages import BaseMessage
 
 from src.config import RAGSettings
-from src.prompts import load_prompt
+from src.rag.utils import build_messages
 from src.types.answer import RAGAnswer
 from src.types.document import DocumentChunk
 from src.types.llm import LLM
@@ -79,6 +79,4 @@ class RAGPipeline:
         :param chunks: Chunks to embed into the context slot.
         :return: Chat messages ready for the LLM.
         """
-        context = "\n---\n".join(c.text for c in chunks)
-        template = load_prompt(self._settings.prompt_name)
-        return template.format_messages(context=context, question=query)
+        return build_messages(query, chunks, self._settings.prompt_name)
