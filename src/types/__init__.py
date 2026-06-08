@@ -9,6 +9,7 @@ from src.types.retriever import Retriever
 from src.types.search_strategy import SearchStrategy
 from src.types.source import SourceDocument
 from src.types.vector_store import VectorStore
+from src.types.verifier import VerificationResult, VerifierProtocol
 
 __all__ = [
     "LLM",
@@ -22,4 +23,6 @@ __all__ = [
     "SearchStrategy",
     "SourceDocument",
     "VectorStore",
+    "VerificationResult",
+    "VerifierProtocol",
 ]

@@ -36,6 +36,23 @@ def load_prompt(name: str) -> ChatPromptTemplate:
 
 
 @cache
+def load_text(name: str) -> str:
+    """
+    Load a plain text entry from the registry by name.
+
+    :param name: Text identifier in the registry.
+    :return: Plain string content.
+    """
+    raw = _load_raw()
+    if name not in raw:
+        raise KeyError(f"Unknown text: {name}")
+    value = raw[name]
+    if not isinstance(value, str):
+        raise TypeError(f"Registry entry {name!r} is not a string")
+    return value
+
+
+@cache
 def load_prompt_group(name: str) -> list[ChatPromptTemplate]:
     """
     Build a list of chat templates from a nested registry entry.

@@ -1,5 +1,10 @@
+from typing import TypeVar
+
 from langchain_core.messages import BaseMessage
 from langchain_ollama import ChatOllama
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 
 class OllamaLLM:
@@ -54,3 +59,14 @@ class OllamaLLM:
         """
         results = self._model.batch(batches)
         return [str(r.content) for r in results]
+
+    def invoke_structured(self, messages: list[BaseMessage], schema: type[T]) -> T:
+        """
+        Generate a typed reply parsed against the given schema.
+
+        :param messages: Ordered chat messages forming the prompt.
+        :param schema: Pydantic model that defines the expected reply shape.
+        :return: Parsed instance of the provided schema.
+        """
+        runnable = self._model.with_structured_output(schema)
+        return runnable.invoke(messages)

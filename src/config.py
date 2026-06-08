@@ -76,6 +76,8 @@ class RAGSettings(BaseModel):
     top_kr: int = Field(20, gt=0)
     strategy: SearchStrategy = SearchStrategy.DEFAULT
     prompt_name: str = "qa_rag"
+    verifier_prompt_name: str = "verifier"
+    refusal_text_name: str = "refusal_text"
 
 
 @lru_cache(maxsize=1)

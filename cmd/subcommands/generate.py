@@ -3,7 +3,7 @@ import argparse
 from cmd.overrides import apply_llm_overrides, apply_rag_overrides
 from src.clients import OllamaLLM
 from src.config import get_llm_settings, get_rag_settings
-from src.rag import AnswerGenerationStage
+from src.rag import AnswerGenerationStage, LLMVerifier
 
 
 def run(args: argparse.Namespace) -> None:
@@ -22,5 +22,6 @@ def run(args: argparse.Namespace) -> None:
         top_p=llm_cfg.top_p,
         top_k=llm_cfg.top_k,
     )
-    stage = AnswerGenerationStage(llm=llm, settings=rag)
+    verifier = LLMVerifier(llm=llm, prompt_name=rag.verifier_prompt_name)
+    stage = AnswerGenerationStage(llm=llm, settings=rag, verifier=verifier)
     stage.run(args.input, args.output, batch_size=args.batch_size)

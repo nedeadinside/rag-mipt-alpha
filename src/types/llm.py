@@ -1,6 +1,9 @@
-from typing import Protocol, runtime_checkable
+from typing import Protocol, TypeVar, runtime_checkable
 
 from langchain_core.messages import BaseMessage
+from pydantic import BaseModel
+
+T = TypeVar("T", bound=BaseModel)
 
 
 @runtime_checkable
@@ -24,5 +27,15 @@ class LLM(Protocol):
 
         :param batches: Conversations to run, each a list of chat messages.
         :return: Assistant reply texts in input order.
+        """
+        ...
+
+    def invoke_structured(self, messages: list[BaseMessage], schema: type[T]) -> T:
+        """
+        Generate a typed reply parsed against the given schema.
+
+        :param messages: Ordered chat messages forming the prompt.
+        :param schema: Pydantic model that defines the expected reply shape.
+        :return: Parsed instance of the provided schema.
         """
         ...

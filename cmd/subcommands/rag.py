@@ -27,6 +27,8 @@ from src.config import (
     get_rag_settings,
     get_retrieval_settings,
 )
+from src.prompts import load_text
+from src.rag import LLMVerifier
 from src.rag.utils import build_messages
 from src.retrieval import HybridRetriever, MultiQueryExpander
 from src.types.document import DocumentChunk
@@ -92,6 +94,8 @@ def run(args: argparse.Namespace) -> None:
         collection=ingestion.collection_name,
         query_expander=expander,
     )
+    verifier = LLMVerifier(llm=llm, prompt_name=rag.verifier_prompt_name)
+    refusal = load_text(rag.refusal_text_name)
 
     output: Path = args.output
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -109,12 +113,36 @@ def run(args: argparse.Namespace) -> None:
                 )
                 triples.append((q_id, query, chunks))
 
-            prompts = [build_messages(q, c, rag.prompt_name) for _, q, c in triples]
-            answers = (
-                [llm.invoke(prompts[0])] if len(prompts) == 1 else llm.invoke_batch(prompts)
-            )
+            passes: list[bool] = []
+            for _, query, chunks in triples:
+                verdict = verifier.verify(query, chunks)
+                if not verdict.is_relevant:
+                    logger.info(
+                        "verifier reject: query_len=%d reason=%s",
+                        len(query),
+                        verdict.reason,
+                    )
+                passes.append(verdict.is_relevant)
 
-            for (q_id, query, chunks), answer in zip(triples, answers, strict=True):
+            accepted_indices = [i for i, ok in enumerate(passes) if ok]
+            accepted_prompts = [
+                build_messages(triples[i][1], triples[i][2], rag.prompt_name)
+                for i in accepted_indices
+            ]
+            if len(accepted_prompts) == 0:
+                accepted_answers: list[str] = []
+            elif len(accepted_prompts) == 1:
+                accepted_answers = [llm.invoke(accepted_prompts[0])]
+            else:
+                accepted_answers = llm.invoke_batch(accepted_prompts)
+
+            cursor = 0
+            for (q_id, query, chunks), ok in zip(triples, passes, strict=True):
+                if ok:
+                    answer = accepted_answers[cursor]
+                    cursor += 1
+                else:
+                    answer = refusal
                 record = {
                     "index": q_id,
                     "question": query,
@@ -126,4 +154,9 @@ def run(args: argparse.Namespace) -> None:
                 }
                 fp.write(json.dumps(record, ensure_ascii=False))
                 fp.write("\n")
-                logger.info("rag done: q_id=%d answer_len=%d", q_id, len(answer))
+                logger.info(
+                    "rag done: q_id=%d answer_len=%d refused=%s",
+                    q_id,
+                    len(answer),
+                    not ok,
+                )

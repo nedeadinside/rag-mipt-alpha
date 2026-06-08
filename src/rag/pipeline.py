@@ -3,11 +3,13 @@ import logging
 from langchain_core.messages import BaseMessage
 
 from src.config import RAGSettings
+from src.prompts import load_text
 from src.rag.utils import build_messages
 from src.types.answer import RAGAnswer
 from src.types.document import DocumentChunk
 from src.types.llm import LLM
 from src.types.retriever import Retriever
+from src.types.verifier import VerifierProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -17,17 +19,25 @@ class RAGPipeline:
     Retrieval-augmented generation pipeline.
     """
 
-    def __init__(self, retriever: Retriever, llm: LLM, settings: RAGSettings) -> None:
+    def __init__(
+        self,
+        retriever: Retriever,
+        llm: LLM,
+        settings: RAGSettings,
+        verifier: VerifierProtocol | None = None,
+    ) -> None:
         """
         Initialize the pipeline.
 
         :param retriever: Retriever used to fetch supporting chunks.
         :param llm: LLM used to generate the final answer.
         :param settings: RAG pipeline settings.
+        :param verifier: Optional relevance verifier; when set, gates generation.
         """
         self._retriever = retriever
         self._llm = llm
         self._settings = settings
+        self._verifier = verifier
 
     def answer(self, query: str) -> RAGAnswer:
         """
@@ -37,6 +47,9 @@ class RAGPipeline:
         :return: Generated answer paired with the chunks used as its context.
         """
         chunks = self._retrieve(query)
+        if not self._is_relevant(query, chunks):
+            text = load_text(self._settings.refusal_text_name)
+            return RAGAnswer(text=text, chunks=chunks)
         messages = self._render_messages(query, chunks)
         text = self._llm.invoke(messages)
         logger.info("rag answer ready: query_len=%d chunks=%d", len(query), len(chunks))
@@ -50,12 +63,31 @@ class RAGPipeline:
         :return: Generated answers in input order.
         """
         chunks_per_query = [self._retrieve(q) for q in queries]
-        batches = [
-            self._render_messages(q, c) for q, c in zip(queries, chunks_per_query, strict=True)
+        passes = [self._is_relevant(q, c) for q, c in zip(queries, chunks_per_query, strict=True)]
+
+        accepted_indices = [i for i, ok in enumerate(passes) if ok]
+        accepted_batches = [
+            self._render_messages(queries[i], chunks_per_query[i]) for i in accepted_indices
         ]
-        texts = self._llm.invoke_batch(batches)
-        logger.info("rag batch ready: queries=%d", len(queries))
-        return [RAGAnswer(text=t, chunks=c) for t, c in zip(texts, chunks_per_query, strict=True)]
+        accepted_texts = self._llm.invoke_batch(accepted_batches) if accepted_batches else []
+
+        refusal = load_text(self._settings.refusal_text_name)
+        answers: list[RAGAnswer] = []
+        cursor = 0
+        for i, ok in enumerate(passes):
+            if ok:
+                text = accepted_texts[cursor]
+                cursor += 1
+            else:
+                text = refusal
+            answers.append(RAGAnswer(text=text, chunks=chunks_per_query[i]))
+        logger.info(
+            "rag batch ready: queries=%d accepted=%d refused=%d",
+            len(queries),
+            len(accepted_indices),
+            len(queries) - len(accepted_indices),
+        )
+        return answers
 
     def _retrieve(self, query: str) -> list[DocumentChunk]:
         """
@@ -80,3 +112,18 @@ class RAGPipeline:
         :return: Chat messages ready for the LLM.
         """
         return build_messages(query, chunks, self._settings.prompt_name)
+
+    def _is_relevant(self, query: str, chunks: list[DocumentChunk]) -> bool:
+        """
+        Ask the verifier whether the chunks cover the question.
+
+        :param query: User query.
+        :param chunks: Retrieved supporting fragments.
+        :return: True when generation should proceed; True unconditionally when no verifier is configured.
+        """
+        if self._verifier is None:
+            return True
+        result = self._verifier.verify(query, chunks)
+        if not result.is_relevant:
+            logger.info("verifier reject: query_len=%d reason=%s", len(query), result.reason)
+        return result.is_relevant
