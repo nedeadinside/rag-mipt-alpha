@@ -41,6 +41,7 @@ def _build_parser() -> argparse.ArgumentParser:
     add_ingestion_flags(p_retrieve)
     add_embedding_flags(p_retrieve)
     add_retrieval_flags(p_retrieve)
+    add_llm_flags(p_retrieve)
     add_rag_flags(p_retrieve)
     p_retrieve.add_argument(
         "--questions", type=Path, required=True, help="Input CSV with q_id,query."

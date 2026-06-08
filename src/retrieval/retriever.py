@@ -1,4 +1,5 @@
 from src.types.document import DocumentChunk
+from src.types.query_expander import QueryExpanderProtocol
 from src.types.reranker import Reranker
 from src.types.search_strategy import SearchStrategy
 from src.types.vector_store import VectorStore
@@ -14,6 +15,7 @@ class HybridRetriever:
         store: VectorStore,
         reranker: Reranker,
         collection: str,
+        query_expander: QueryExpanderProtocol | None = None,
     ) -> None:
         """
         Initialize the retriever.
@@ -21,10 +23,12 @@ class HybridRetriever:
         :param store: Vector store used for first-stage recall.
         :param reranker: Reranker used for second-stage scoring.
         :param collection: Collection name to search.
+        :param query_expander: Query expander used by the multiquery strategy.
         """
         self._store = store
         self._reranker = reranker
         self._collection = collection
+        self._expander = query_expander
 
     def search(
         self,
@@ -53,5 +57,11 @@ class HybridRetriever:
             case SearchStrategy.DEFAULT:
                 candidates = self._store.search(self._collection, query, top_k)
                 return self._reranker.rerank(query, candidates, top_kr)
-            case _:
-                pass
+            case SearchStrategy.MULTIQUERY:
+                if self._expander is None:
+                    raise ValueError("MULTIQUERY strategy requires a query_expander")
+                queries = self._expander.expand(query)
+                candidates = self._store.search_multiquery(
+                    self._collection, queries, top_k
+                )
+                return self._reranker.rerank(query, candidates, top_kr)

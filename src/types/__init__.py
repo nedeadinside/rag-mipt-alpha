@@ -3,6 +3,7 @@ from src.types.chunker import Chunker
 from src.types.document import DocumentChunk
 from src.types.embedder import Embedder
 from src.types.llm import LLM
+from src.types.query_expander import QueryExpanderProtocol
 from src.types.reranker import Reranker
 from src.types.retriever import Retriever
 from src.types.search_strategy import SearchStrategy
@@ -14,6 +15,7 @@ __all__ = [
     "Chunker",
     "DocumentChunk",
     "Embedder",
+    "QueryExpanderProtocol",
     "RAGAnswer",
     "Reranker",
     "Retriever",

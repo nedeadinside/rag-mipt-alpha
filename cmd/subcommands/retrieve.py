@@ -3,6 +3,7 @@ import argparse
 from cmd.overrides import (
     apply_embedding_overrides,
     apply_ingestion_overrides,
+    apply_llm_overrides,
     apply_rag_overrides,
     apply_retrieval_overrides,
 )
@@ -12,15 +13,18 @@ from src.clients import (
     FastEmbedE5DenseEmbedder,
     FastEmbedSparseEmbedder,
     LocalHybridQdrantStore,
+    OllamaLLM,
 )
 from src.config import (
     get_embedding_settings,
     get_ingestion_settings,
+    get_llm_settings,
     get_rag_settings,
     get_retrieval_settings,
 )
 from src.rag import ChunkRetrievalStage
-from src.retrieval import HybridRetriever
+from src.retrieval import HybridRetriever, MultiQueryExpander
+from src.types.search_strategy import SearchStrategy
 
 
 def run(args: argparse.Namespace) -> None:
@@ -43,10 +47,24 @@ def run(args: argparse.Namespace) -> None:
         retrieval=retrieval,
     )
     reranker = CrossEncoderReranker(retrieval.reranker_model, retrieval.reranker_device)
+
+    expander: MultiQueryExpander | None = None
+    if rag.strategy == SearchStrategy.MULTIQUERY:
+        llm_cfg = apply_llm_overrides(args, get_llm_settings())
+        llm = OllamaLLM(
+            llm_cfg.model_name,
+            llm_cfg.base_url,
+            llm_cfg.temperature,
+            top_p=llm_cfg.top_p,
+            top_k=llm_cfg.top_k,
+        )
+        expander = MultiQueryExpander(llm=llm)
+
     retriever = HybridRetriever(
         store=store,
         reranker=reranker,
         collection=ingestion.collection_name,
+        query_expander=expander,
     )
 
     stage = ChunkRetrievalStage(retriever=retriever, settings=rag)

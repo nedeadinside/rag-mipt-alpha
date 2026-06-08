@@ -28,8 +28,9 @@ from src.config import (
     get_retrieval_settings,
 )
 from src.rag.utils import build_messages
-from src.retrieval import HybridRetriever
+from src.retrieval import HybridRetriever, MultiQueryExpander
 from src.types.document import DocumentChunk
+from src.types.search_strategy import SearchStrategy
 
 logger = logging.getLogger(__name__)
 
@@ -75,17 +76,21 @@ def run(args: argparse.Namespace) -> None:
         retrieval=retrieval,
     )
     reranker = CrossEncoderReranker(retrieval.reranker_model, retrieval.reranker_device)
-    retriever = HybridRetriever(
-        store=store,
-        reranker=reranker,
-        collection=ingestion.collection_name,
-    )
     llm = OllamaLLM(
         llm_cfg.model_name,
         llm_cfg.base_url,
         llm_cfg.temperature,
         top_p=llm_cfg.top_p,
         top_k=llm_cfg.top_k,
+    )
+    expander = (
+        MultiQueryExpander(llm=llm) if rag.strategy == SearchStrategy.MULTIQUERY else None
+    )
+    retriever = HybridRetriever(
+        store=store,
+        reranker=reranker,
+        collection=ingestion.collection_name,
+        query_expander=expander,
     )
 
     output: Path = args.output

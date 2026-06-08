@@ -8,11 +8,11 @@ _TEMPLATES_PATH = Path(__file__).parent / "templates.yaml"
 
 
 @lru_cache(maxsize=1)
-def _load_raw() -> dict[str, dict[str, str]]:
+def _load_raw() -> dict[str, dict]:
     """
     Load the raw prompt registry from disk once.
 
-    :return: Mapping from prompt name to its system and user template strings.
+    :return: Mapping from prompt name to either a system/user block or a nested group.
     """
     with _TEMPLATES_PATH.open(encoding="utf-8") as f:
         return yaml.safe_load(f)
@@ -33,3 +33,23 @@ def load_prompt(name: str) -> ChatPromptTemplate:
     return ChatPromptTemplate.from_messages(
         [("system", block["system"]), ("user", block["user"])],
     )
+
+
+@cache
+def load_prompt_group(name: str) -> list[ChatPromptTemplate]:
+    """
+    Build a list of chat templates from a nested registry entry.
+
+    :param name: Group identifier in the registry.
+    :return: Chat templates in registry-declared order.
+    """
+    raw = _load_raw()
+    if name not in raw:
+        raise KeyError(f"Unknown prompt group: {name}")
+    group = raw[name]
+    return [
+        ChatPromptTemplate.from_messages(
+            [("system", block["system"]), ("user", block["user"])],
+        )
+        for block in group.values()
+    ]
