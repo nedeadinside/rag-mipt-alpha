@@ -37,3 +37,6 @@ rag:
   top_kr: 5
   strategy: default
   prompt_name: qa_rag
+  verifier_prompt_name: verifier
+  refusal_text_name: refusal_text
+
