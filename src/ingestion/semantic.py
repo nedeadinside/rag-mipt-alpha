@@ -23,6 +23,10 @@ class SemanticChunker:
             embedding_model=settings.embedding_model,
             threshold=settings.threshold,
             chunk_size=settings.chunk_size,
+            min_sentences_per_chunk=settings.min_sentences_per_chunk,
+            min_characters_per_sentence=settings.min_characters_per_sentence,
+            skip_window=settings.skip_window,
+            filter_tolerance=settings.filter_tolerance,
         )
         self._refiner = OverlapRefinery(
             tokenizer="character",

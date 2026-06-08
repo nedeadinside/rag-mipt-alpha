@@ -24,10 +24,14 @@ class ChunkingSettings(BaseModel):
     Chunking settings.
     """
 
-    chunk_size: int = Field(512, gt=0)
-    threshold: float = Field(0.8, gt=0, lt=1)
+    chunk_size: int = Field(496, gt=0)
+    threshold: float = Field(0.5, gt=0, lt=1)
     embedding_model: str = "minishlab/potion-base-32M"
-    overlap_size: float = Field(0.1, gt=0, lt=1)
+    min_sentences_per_chunk: int = Field(4, gt=0)
+    min_characters_per_sentence: int = Field(80, gt=0)
+    skip_window: int = Field(1, ge=0)
+    filter_tolerance: float = Field(0.05, gt=0, lt=1)
+    overlap_size: float = Field(0.25, gt=0, lt=1)
     overlap_method: Literal["suffix", "prefix", "justified"]
 
 
@@ -59,6 +63,8 @@ class LLMSettings(BaseModel):
     model_name: str
     base_url: str = "http://localhost:11434"
     temperature: float = Field(0.2, ge=0.0, le=2.0)
+    top_p: float | None = Field(None, gt=0.0, le=1.0)
+    top_k: int | None = Field(None, gt=0)
 
 
 class RAGSettings(BaseModel):

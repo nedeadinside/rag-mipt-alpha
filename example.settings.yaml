@@ -5,9 +5,13 @@ ingestion:
   upsert_batch_size: 64
 
 chunking:
-  chunk_size: 512
-  threshold: 0.8
+  chunk_size: 496
+  threshold: 0.5
   embedding_model: minishlab/potion-base-32M
+  min_sentences_per_chunk: 4
+  min_characters_per_sentence: 80
+  skip_window: 1
+  filter_tolerance: 0.05
   overlap_size: 0.25
   overlap_method: justified
 
