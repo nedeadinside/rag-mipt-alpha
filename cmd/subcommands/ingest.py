@@ -3,6 +3,12 @@ import logging
 from collections.abc import Iterable, Iterator
 from itertools import islice
 
+from cmd.overrides import (
+    apply_chunking_overrides,
+    apply_embedding_overrides,
+    apply_ingestion_overrides,
+    apply_retrieval_overrides,
+)
 from src.clients import (
     FastEmbedE5DenseEmbedder,
     FastEmbedSparseEmbedder,
@@ -34,23 +40,16 @@ def _take(documents: Iterable[SourceDocument], limit: int | None) -> Iterator[So
     yield from islice(documents, limit)
 
 
-def main() -> None:
+def run(args: argparse.Namespace) -> None:
     """
-    Run the ingestion entry point.
+    Execute the ingestion pipeline using CLI overrides on top of settings.
+
+    :param args: Parsed CLI namespace.
     """
-    parser = argparse.ArgumentParser(description="Run ingestion pipeline.")
-    parser.add_argument("--limit", type=int, default=None, help="Process only first N source docs.")
-    args = parser.parse_args()
-
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    )
-
-    ingestion = get_ingestion_settings()
-    chunking = get_chunking_settings()
-    embedding = get_embedding_settings()
-    retrieval = get_retrieval_settings()
+    ingestion = apply_ingestion_overrides(args, get_ingestion_settings())
+    chunking = apply_chunking_overrides(args, get_chunking_settings())
+    embedding = apply_embedding_overrides(args, get_embedding_settings())
+    retrieval = apply_retrieval_overrides(args, get_retrieval_settings())
 
     dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.cache_dir)
     sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.cache_dir)
@@ -66,7 +65,3 @@ def main() -> None:
     documents = _take(load_websites(ingestion.websites_csv_path), args.limit)
     total = pipeline.run(documents)
     logger.info("upserted %d chunks into %r", total, ingestion.collection_name)
-
-
-if __name__ == "__main__":
-    main()

@@ -1,6 +1,6 @@
 line-length = 100
 target-version = "py313"
-src = ["src", "scripts"]
+src = ["src", "scripts", "cmd"]
 extend-exclude = [".venv", "data", ".qdrant"]
 
 [lint]
@@ -22,7 +22,7 @@ ignore = [
 ]
 
 [lint.isort]
-known-first-party = ["src"]
+known-first-party = ["src", "cmd"]
 
 [format]
 quote-style = "double"
