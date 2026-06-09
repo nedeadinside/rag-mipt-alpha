@@ -1,8 +1,11 @@
 from typing import TypeVar
 
+from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import BaseMessage
 from langchain_ollama import ChatOllama
 from pydantic import BaseModel
+
+from src.clients.utils import DEFAULT_RETRY_EXCEPTIONS, llm_retry
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -40,6 +43,7 @@ class OllamaLLM:
             kwargs["top_k"] = top_k
         self._model = ChatOllama(**kwargs)
 
+    @llm_retry()
     def invoke(self, messages: list[BaseMessage]) -> str:
         """
         Generate a reply for a single chat conversation.
@@ -50,6 +54,7 @@ class OllamaLLM:
         result = self._model.invoke(messages)
         return str(result.content)
 
+    @llm_retry()
     def invoke_batch(self, batches: list[list[BaseMessage]]) -> list[str]:
         """
         Generate replies for several chat conversations in one call.
@@ -60,6 +65,7 @@ class OllamaLLM:
         results = self._model.batch(batches)
         return [str(r.content) for r in results]
 
+    @llm_retry(exceptions=(*DEFAULT_RETRY_EXCEPTIONS, OutputParserException))
     def invoke_structured(self, messages: list[BaseMessage], schema: type[T]) -> T:
         """
         Generate a typed reply parsed against the given schema.
