@@ -19,6 +19,7 @@ embedding:
   dense_model: intfloat/multilingual-e5-large
   sparse_model: Qdrant/bm42-all-minilm-l6-v2-attentions
   cache_dir: .fastembed
+  use_cuda: false
 
 retrieval:
   prefetch_limit: 100
