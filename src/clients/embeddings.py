@@ -7,14 +7,20 @@ class FastEmbedE5DenseEmbedder:
     Dense embedder backed by FastEmbed.
     """
 
-    def __init__(self, model_name: str, cache_dir: str | None = None) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        use_cuda: bool = False,
+        cache_dir: str | None = None,
+    ) -> None:
         """
         Initialize the embedder.
 
         :param model_name: FastEmbed dense model identifier.
+        :param use_cuda: Whether to run inference on CUDA.
         :param cache_dir: Local cache directory for downloaded model weights.
         """
-        self._model = TextEmbedding(model_name=model_name, cache_dir=cache_dir)
+        self._model = TextEmbedding(model_name=model_name, cache_dir=cache_dir, cuda=use_cuda)
 
     def embed_query(self, text: str) -> list[float]:
         """
@@ -41,14 +47,22 @@ class FastEmbedSparseEmbedder:
     Sparse embedder backed by FastEmbed.
     """
 
-    def __init__(self, model_name: str, cache_dir: str | None = None) -> None:
+    def __init__(
+        self,
+        model_name: str,
+        use_cuda: bool = False,
+        cache_dir: str | None = None,
+    ) -> None:
         """
         Initialize the embedder.
 
         :param model_name: FastEmbed sparse model identifier.
+        :param use_cuda: Whether to run inference on CUDA.
         :param cache_dir: Local cache directory for downloaded model weights.
         """
-        self._model = SparseTextEmbedding(model_name=model_name, cache_dir=cache_dir)
+        self._model = SparseTextEmbedding(
+            model_name=model_name, cache_dir=cache_dir, cuda=use_cuda
+        )
 
     def embed_query(self, text: str) -> SparseVector:
         """

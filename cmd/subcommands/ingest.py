@@ -51,8 +51,8 @@ def run(args: argparse.Namespace) -> None:
     embedding = apply_embedding_overrides(args, get_embedding_settings())
     retrieval = apply_retrieval_overrides(args, get_retrieval_settings())
 
-    dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.cache_dir)
-    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.cache_dir)
+    dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.use_cuda, embedding.cache_dir)
+    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.use_cuda, embedding.cache_dir)
     store = LocalHybridQdrantStore(
         path=ingestion.qdrant_path,
         dense=dense,

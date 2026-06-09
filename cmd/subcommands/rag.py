@@ -69,8 +69,8 @@ def run(args: argparse.Namespace) -> None:
     llm_cfg = apply_llm_overrides(args, get_llm_settings())
     rag = apply_rag_overrides(args, get_rag_settings())
 
-    dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.cache_dir)
-    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.cache_dir)
+    dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.use_cuda, embedding.cache_dir)
+    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.use_cuda, embedding.cache_dir)
     store = LocalHybridQdrantStore(
         path=ingestion.qdrant_path,
         dense=dense,

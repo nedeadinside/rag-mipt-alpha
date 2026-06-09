@@ -43,6 +43,7 @@ class EmbeddingSettings(BaseModel):
     dense_model: str = "intfloat/multilingual-e5-large"
     sparse_model: str = "Qdrant/bm42-all-minilm-l6-v2-attentions"
     cache_dir: str | None = None
+    use_cuda: bool = False
 
 
 class RetrievalSettings(BaseModel):
