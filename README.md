@@ -20,7 +20,7 @@ cp example.settings.yaml settings.yaml
 
 Put the input data under `data/` (not tracked by git):
 
-- `data/websites.csv` - source documents (`text`, `title`, `url`, `kind`)
+- `data/websites.csv` - source documents (`web_id`, `url`, `kind`, `title`, `text`)
 - `data/questions.csv` - evaluation questions (`q_id`, `query`)
 
 ## Configuration
@@ -65,7 +65,7 @@ Every command accepts overrides for the relevant config sections
 ## Pipeline
 
 1. **Ingestion** - stream documents from CSV, split with a semantic chunker (chonkie),
-   embed with dense and sparse models, upsert into a local Qdrant store (for hackaton might be okay).
+   embed with dense and sparse models, upsert into a local Qdrant store (for hackathon might be okay).
 2. **Retrieval** - hybrid search with RRF fusion of dense and sparse prefetches,
    optional multi-query expansion via the LLM, and reranking  down to `top_kr` chunks.
 3. **Verification** - the LLM judges whether retrieved fragments are relevant to the question;
