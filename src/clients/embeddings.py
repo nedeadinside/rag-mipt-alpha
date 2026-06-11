@@ -41,6 +41,15 @@ class FastEmbedE5DenseEmbedder:
         """
         return [vector.tolist() for vector in self._model.passage_embed(texts)]
 
+    def embed_queries(self, queries: list[str]) -> list[list[float]]:
+        """
+        Embed a batch of queries.
+
+        :param queries: Queries to embed.
+        :return: Query-side embeddings in input order.
+        """
+        return [vector.tolist() for vector in self._model.query_embed(queries)]
+
 
 class FastEmbedSparseEmbedder:
     """
@@ -60,9 +69,7 @@ class FastEmbedSparseEmbedder:
         :param use_cuda: Whether to run inference on CUDA.
         :param cache_dir: Local cache directory for downloaded model weights.
         """
-        self._model = SparseTextEmbedding(
-            model_name=model_name, cache_dir=cache_dir, cuda=use_cuda
-        )
+        self._model = SparseTextEmbedding(model_name=model_name, cache_dir=cache_dir, cuda=use_cuda)
 
     def embed_query(self, text: str) -> SparseVector:
         """
@@ -84,4 +91,16 @@ class FastEmbedSparseEmbedder:
         return [
             SparseVector(indices=sparse.indices.tolist(), values=sparse.values.tolist())
             for sparse in self._model.embed(texts)
+        ]
+
+    def embed_queries(self, queries: list[str]) -> list[SparseVector]:
+        """
+        Embed a batch of query list.
+
+        :param queries: Queries to embed.
+        :return: Query-side embeddings in input order.
+        """
+        return [
+            SparseVector(indices=sparse.indices.tolist(), values=sparse.values.tolist())
+            for sparse in self._model.query_embed(queries)
         ]

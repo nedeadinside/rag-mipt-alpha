@@ -24,3 +24,12 @@ class Embedder[VectorT](Protocol):
         :return: Query-side embedding.
         """
         ...
+
+    def embed_queries(self, queries: list[str]) -> list[VectorT]:
+        """
+        Embed a batch of query list.
+
+        :param queries: Queries to embed.
+        :return: Query-side embeddings in input order.
+        """
+        ...

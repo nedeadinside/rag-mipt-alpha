@@ -196,10 +196,7 @@ class LocalQdrantStore(LocalQdrantBase):
         :return: Matched chunks.
         """
         self._assert_exists(collection)
-
-        prefetches = [
-            self._dense_prefetch(self._embedder.embed_query(q), top_k) for q in queries
-        ]
+        prefetches = [self._dense_prefetch(q, top_k) for q in self._embedder.embed_queries(queries)]
         return self._rrf_search(collection, prefetches, top_k)
 
 
@@ -307,11 +304,12 @@ class LocalHybridQdrantStore(LocalQdrantBase):
 
         prefetch_limit = self._retrieval.prefetch_limit
         prefetches: list[Prefetch] = []
-        for query in queries:
-            prefetches.append(
-                self._dense_prefetch(self._dense.embed_query(query), prefetch_limit)
-            )
-            prefetches.append(
-                self._sparse_prefetch(self._sparse.embed_query(query), prefetch_limit)
-            )
+
+        embedded_sparse = self._sparse.embed_queries(queries)
+        embedded_dense = self._dense.embed_queries(queries)
+
+        for eqs, eqd in zip(embedded_sparse, embedded_dense, strict=True):
+            prefetches.append(self._sparse_prefetch(eqs, prefetch_limit))
+            prefetches.append(self._dense_prefetch(eqd, prefetch_limit))
+
         return self._rrf_search(collection, prefetches, top_k)
