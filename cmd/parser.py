@@ -10,7 +10,7 @@ from cmd.flags import (
     add_rag_flags,
     add_retrieval_flags,
 )
-from cmd.subcommands import generate, ingest, rag, retrieve
+from cmd.subcommands import generate, ingest, rag, rerank, retrieve, verify
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -36,7 +36,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_ingest.set_defaults(func=ingest.run)
 
     p_retrieve = sub.add_parser(
-        "retrieve", help="Stage 1: retrieve chunks per question into JSONL."
+        "retrieve", help="Stage 1: recall candidate chunks per question into JSONL."
     )
     add_ingestion_flags(p_retrieve)
     add_embedding_flags(p_retrieve)
@@ -52,12 +52,30 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_retrieve.set_defaults(func=retrieve.run)
 
+    p_rerank = sub.add_parser(
+        "rerank", help="Stage 2: rerank candidate chunks from a JSONL."
+    )
+    add_retrieval_flags(p_rerank)
+    add_rag_flags(p_rerank)
+    p_rerank.add_argument("--input", type=Path, required=True, help="JSONL from the retrieve stage.")
+    p_rerank.add_argument("--output", type=Path, required=True, help="Destination JSONL.")
+    p_rerank.set_defaults(func=rerank.run)
+
+    p_verify = sub.add_parser(
+        "verify", help="Stage 3: annotate chunks with a relevance verdict from a JSONL."
+    )
+    add_llm_flags(p_verify)
+    add_rag_flags(p_verify)
+    p_verify.add_argument("--input", type=Path, required=True, help="JSONL from the rerank stage.")
+    p_verify.add_argument("--output", type=Path, required=True, help="Destination JSONL.")
+    p_verify.set_defaults(func=verify.run)
+
     p_generate = sub.add_parser(
-        "generate", help="Stage 2: generate answers from a chunks JSONL."
+        "generate", help="Stage 4: generate answers from a verified chunks JSONL."
     )
     add_llm_flags(p_generate)
     add_rag_flags(p_generate)
-    p_generate.add_argument("--input", type=Path, required=True, help="JSONL from stage one.")
+    p_generate.add_argument("--input", type=Path, required=True, help="JSONL from the verify stage.")
     p_generate.add_argument(
         "--output", type=Path, required=True, help="Destination submission JSONL."
     )
