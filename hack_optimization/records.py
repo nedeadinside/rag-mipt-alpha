@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from pydantic import BaseModel
 
 from src.types.document import DocumentChunk
@@ -8,18 +10,11 @@ class ChunkRecord(BaseModel):
     Per-question artifact carrying the candidate chunks between stages.
     """
 
+    key_field: ClassVar[str] = "q_id"
+
     q_id: int
     query: str
     chunks: list[DocumentChunk]
-
-    @property
-    def record_key(self) -> int:
-        """
-        Return the stable key identifying this record across resumes.
-
-        :return: Question identifier.
-        """
-        return self.q_id
 
 
 class VerifiedRecord(ChunkRecord):
@@ -36,17 +31,10 @@ class SubmissionRecord(BaseModel):
     Final per-question submission artifact.
     """
 
+    key_field: ClassVar[str] = "index"
+
     index: int
     question: str
     answer: str
     chunk_ids: list[str]
     links: list[str]
-
-    @property
-    def record_key(self) -> int:
-        """
-        Return the stable key identifying this record across resumes.
-
-        :return: Question identifier.
-        """
-        return self.index

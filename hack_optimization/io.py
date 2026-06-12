@@ -2,7 +2,7 @@ import json
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Protocol, Self
+from typing import Any, ClassVar, Protocol, Self
 
 
 class _Record(Protocol):
@@ -10,8 +10,7 @@ class _Record(Protocol):
     Structural contract for stage artifacts that can be serialized and keyed.
     """
 
-    @property
-    def record_key(self) -> int: ...
+    key_field: ClassVar[str]
 
     def model_dump(self, *, mode: str = ...) -> dict[str, Any]: ...
 
@@ -58,7 +57,7 @@ def completed_keys[RecordT: _Record](path: Path, model: type[RecordT]) -> set[in
             if index == len(lines) - 1:
                 continue
             raise
-        keys.add(model.model_validate(data).record_key)
+        keys.add(data[model.key_field])
     return keys
 
 
