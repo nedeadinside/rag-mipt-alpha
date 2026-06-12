@@ -95,7 +95,7 @@ class FastEmbedSparseEmbedder:
 
     def embed_queries(self, queries: list[str]) -> list[SparseVector]:
         """
-        Embed a batch of query list.
+        Embed a batch of queries.
 
         :param queries: Queries to embed.
         :return: Query-side embeddings in input order.
