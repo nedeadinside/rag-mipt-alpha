@@ -1,9 +1,9 @@
+from typing import Literal
 from uuid import NAMESPACE_URL, uuid5
 
 from chonkie import OverlapRefinery
 from chonkie import SemanticChunker as ChonkieSemanticChunker
 
-from src.config import ChunkingSettings
 from src.types.document import DocumentChunk
 from src.types.source import SourceDocument
 
@@ -13,25 +13,44 @@ class SemanticChunker:
     Semantic splitter with overlap refinement over source documents.
     """
 
-    def __init__(self, settings: ChunkingSettings) -> None:
+    def __init__(
+        self,
+        embedding_model: str,
+        threshold: float,
+        chunk_size: int,
+        min_sentences_per_chunk: int,
+        min_characters_per_sentence: int,
+        skip_window: int,
+        filter_tolerance: float,
+        overlap_size: float,
+        overlap_method: Literal["suffix", "prefix", "justified"],
+    ) -> None:
         """
         Initialize the chunker.
 
-        :param settings: Chunking settings.
+        :param embedding_model: Model used to embed sentences for semantic splitting.
+        :param threshold: Semantic similarity threshold for splitting.
+        :param chunk_size: Target chunk size in tokens.
+        :param min_sentences_per_chunk: Minimum sentences per chunk.
+        :param min_characters_per_sentence: Minimum characters per sentence.
+        :param skip_window: Window of chunks to skip when merging similar segments.
+        :param filter_tolerance: Tolerance for the similarity filter.
+        :param overlap_size: Fraction of chunk used as overlap context.
+        :param overlap_method: Overlap placement strategy.
         """
         self._chunker = ChonkieSemanticChunker(
-            embedding_model=settings.embedding_model,
-            threshold=settings.threshold,
-            chunk_size=settings.chunk_size,
-            min_sentences_per_chunk=settings.min_sentences_per_chunk,
-            min_characters_per_sentence=settings.min_characters_per_sentence,
-            skip_window=settings.skip_window,
-            filter_tolerance=settings.filter_tolerance,
+            embedding_model=embedding_model,
+            threshold=threshold,
+            chunk_size=chunk_size,
+            min_sentences_per_chunk=min_sentences_per_chunk,
+            min_characters_per_sentence=min_characters_per_sentence,
+            skip_window=skip_window,
+            filter_tolerance=filter_tolerance,
         )
         self._refiner = OverlapRefinery(
             tokenizer="character",
-            context_size=settings.overlap_size,
-            method=settings.overlap_method,
+            context_size=overlap_size,
+            method=overlap_method,
             merge=True,
         )
 

@@ -5,13 +5,6 @@ from collections.abc import Iterator
 from itertools import islice
 from pathlib import Path
 
-from cmd.overrides import (
-    apply_embedding_overrides,
-    apply_ingestion_overrides,
-    apply_llm_overrides,
-    apply_rag_overrides,
-    apply_retrieval_overrides,
-)
 from cmd.questions import iter_questions
 from src.clients import (
     CrossEncoderReranker,
@@ -19,13 +12,6 @@ from src.clients import (
     FastEmbedSparseEmbedder,
     LocalHybridQdrantStore,
     OllamaLLM,
-)
-from src.config import (
-    get_embedding_settings,
-    get_ingestion_settings,
-    get_llm_settings,
-    get_rag_settings,
-    get_retrieval_settings,
 )
 from src.prompts import load_text
 from src.rag import LLMVerifier
@@ -63,39 +49,33 @@ def run(args: argparse.Namespace) -> None:
     if args.batch_size <= 0:
         raise ValueError("batch_size must be positive")
 
-    ingestion = apply_ingestion_overrides(args, get_ingestion_settings())
-    embedding = apply_embedding_overrides(args, get_embedding_settings())
-    retrieval = apply_retrieval_overrides(args, get_retrieval_settings())
-    llm_cfg = apply_llm_overrides(args, get_llm_settings())
-    rag = apply_rag_overrides(args, get_rag_settings())
-
-    dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.use_cuda, embedding.cache_dir)
-    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.use_cuda, embedding.cache_dir)
+    dense = FastEmbedE5DenseEmbedder(args.dense_model, args.use_cuda, args.cache_dir)
+    sparse = FastEmbedSparseEmbedder(args.sparse_model, args.use_cuda, args.cache_dir)
     store = LocalHybridQdrantStore(
-        path=ingestion.qdrant_path,
+        path=args.qdrant_path,
         dense=dense,
         sparse=sparse,
-        retrieval=retrieval,
+        prefetch_limit=args.prefetch_limit,
     )
-    reranker = CrossEncoderReranker(retrieval.reranker_model, retrieval.reranker_device)
+    reranker = CrossEncoderReranker(args.reranker_model, args.reranker_device)
     llm = OllamaLLM(
-        llm_cfg.model_name,
-        llm_cfg.base_url,
-        llm_cfg.temperature,
-        top_p=llm_cfg.top_p,
-        top_k=llm_cfg.top_k,
+        args.llm_model_name,
+        args.llm_base_url,
+        args.llm_temperature,
+        top_p=args.llm_top_p,
+        top_k=args.llm_top_k,
     )
     expander = (
-        MultiQueryExpander(llm=llm) if rag.strategy == SearchStrategy.MULTIQUERY else None
+        MultiQueryExpander(llm=llm) if args.strategy == SearchStrategy.MULTIQUERY else None
     )
     retriever = HybridRetriever(
         store=store,
         reranker=reranker,
-        collection=ingestion.collection_name,
+        collection=args.collection_name,
         query_expander=expander,
     )
-    verifier = LLMVerifier(llm=llm, prompt_name=rag.verifier_prompt_name)
-    refusal = load_text(rag.refusal_text_name)
+    verifier = LLMVerifier(llm=llm, prompt_name=args.verifier_prompt_name)
+    refusal = load_text(args.refusal_text_name)
 
     output: Path = args.output
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -107,9 +87,9 @@ def run(args: argparse.Namespace) -> None:
             for q_id, query in batch:
                 chunks = retriever.search(
                     query=query,
-                    top_k=rag.top_k,
-                    top_kr=rag.top_kr,
-                    strategy=rag.strategy,
+                    top_k=args.top_k,
+                    top_kr=args.top_kr,
+                    strategy=args.strategy,
                 )
                 triples.append((q_id, query, chunks))
 
@@ -126,7 +106,7 @@ def run(args: argparse.Namespace) -> None:
 
             accepted_indices = [i for i, ok in enumerate(passes) if ok]
             accepted_prompts = [
-                build_messages(triples[i][1], triples[i][2], rag.prompt_name)
+                build_messages(triples[i][1], triples[i][2], args.prompt_name)
                 for i in accepted_indices
             ]
             if len(accepted_prompts) == 0:

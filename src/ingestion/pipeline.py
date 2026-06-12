@@ -1,7 +1,7 @@
 import logging
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from itertools import batched
 
-from src.config import IngestionSettings
 from src.types.chunker import Chunker
 from src.types.document import DocumentChunk
 from src.types.source import SourceDocument
@@ -19,18 +19,21 @@ class IngestionPipeline:
         self,
         chunker: Chunker,
         store: VectorStore,
-        settings: IngestionSettings,
+        collection_name: str,
+        upsert_batch_size: int,
     ) -> None:
         """
         Initialize the pipeline.
 
         :param chunker: Chunker.
         :param store: Vector store.
-        :param settings: Ingestion settings.
+        :param collection_name: Target collection for upserts.
+        :param upsert_batch_size: Number of chunks written per upsert batch.
         """
         self._chunker = chunker
         self._store = store
-        self._settings = settings
+        self._collection_name = collection_name
+        self._upsert_batch_size = upsert_batch_size
 
     def run(self, documents: Iterable[SourceDocument]) -> int:
         """
@@ -39,32 +42,22 @@ class IngestionPipeline:
         :param documents: Source documents to ingest.
         :return: Number of chunks written.
         """
-        collection = self._settings.collection_name
-        batch_size = self._settings.upsert_batch_size
 
-        buffer: list[DocumentChunk] = []
         docs_seen = 0
         total = 0
-        for doc in documents:
-            docs_seen += 1
-            buffer.extend(self._chunker.chunk(doc))
-            while len(buffer) >= batch_size:
-                head = buffer[:batch_size]
-                buffer = buffer[batch_size:]
-                self._store.upsert(collection, head)
-                total += len(head)
-                logger.info(
-                    "upserted batch=%d total_chunks=%d docs_seen=%d",
-                    len(head),
-                    total,
-                    docs_seen,
-                )
-        if buffer:
-            self._store.upsert(collection, buffer)
-            total += len(buffer)
+
+        def chunks() -> Iterator[DocumentChunk]:
+            nonlocal docs_seen
+            for doc in documents:
+                docs_seen += 1
+                yield from self._chunker.chunk(doc)
+
+        for batch in batched(chunks(), self._upsert_batch_size, strict=False):
+            self._store.upsert(self._collection_name, batch)
+            total += len(batch)
             logger.info(
-                "upserted batch=%d total_chunks=%d docs_seen=%d (tail)",
-                len(buffer),
+                "upserted batch=%d total_chunks=%d docs_seen=%d",
+                len(batch),
                 total,
                 docs_seen,
             )

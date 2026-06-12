@@ -3,22 +3,10 @@ import logging
 from collections.abc import Iterable, Iterator
 from itertools import islice
 
-from cmd.overrides import (
-    apply_chunking_overrides,
-    apply_embedding_overrides,
-    apply_ingestion_overrides,
-    apply_retrieval_overrides,
-)
 from src.clients import (
     FastEmbedE5DenseEmbedder,
     FastEmbedSparseEmbedder,
     LocalHybridQdrantStore,
-)
-from src.config import (
-    get_chunking_settings,
-    get_embedding_settings,
-    get_ingestion_settings,
-    get_retrieval_settings,
 )
 from src.ingestion import IngestionPipeline, SemanticChunker, load_websites
 from src.types.source import SourceDocument
@@ -42,26 +30,36 @@ def _take(documents: Iterable[SourceDocument], limit: int | None) -> Iterator[So
 
 def run(args: argparse.Namespace) -> None:
     """
-    Execute the ingestion pipeline using CLI overrides on top of settings.
+    Execute the ingestion pipeline using settings from CLI arguments.
 
     :param args: Parsed CLI namespace.
     """
-    ingestion = apply_ingestion_overrides(args, get_ingestion_settings())
-    chunking = apply_chunking_overrides(args, get_chunking_settings())
-    embedding = apply_embedding_overrides(args, get_embedding_settings())
-    retrieval = apply_retrieval_overrides(args, get_retrieval_settings())
-
-    dense = FastEmbedE5DenseEmbedder(embedding.dense_model, embedding.use_cuda, embedding.cache_dir)
-    sparse = FastEmbedSparseEmbedder(embedding.sparse_model, embedding.use_cuda, embedding.cache_dir)
+    dense = FastEmbedE5DenseEmbedder(args.dense_model, args.use_cuda, args.cache_dir)
+    sparse = FastEmbedSparseEmbedder(args.sparse_model, args.use_cuda, args.cache_dir)
     store = LocalHybridQdrantStore(
-        path=ingestion.qdrant_path,
+        path=args.qdrant_path,
         dense=dense,
         sparse=sparse,
-        retrieval=retrieval,
+        prefetch_limit=args.prefetch_limit,
     )
-    chunker = SemanticChunker(chunking)
-    pipeline = IngestionPipeline(chunker=chunker, store=store, settings=ingestion)
+    chunker = SemanticChunker(
+        embedding_model=args.chunker_embedding_model,
+        threshold=args.threshold,
+        chunk_size=args.chunk_size,
+        min_sentences_per_chunk=args.min_sentences_per_chunk,
+        min_characters_per_sentence=args.min_characters_per_sentence,
+        skip_window=args.skip_window,
+        filter_tolerance=args.filter_tolerance,
+        overlap_size=args.overlap_size,
+        overlap_method=args.overlap_method,
+    )
+    pipeline = IngestionPipeline(
+        chunker=chunker,
+        store=store,
+        collection_name=args.collection_name,
+        upsert_batch_size=args.upsert_batch_size,
+    )
 
-    documents = _take(load_websites(ingestion.websites_csv_path), args.limit)
+    documents = _take(load_websites(args.websites_csv_path), args.limit)
     total = pipeline.run(documents)
-    logger.info("upserted %d chunks into %r", total, ingestion.collection_name)
+    logger.info("upserted %d chunks into %r", total, args.collection_name)

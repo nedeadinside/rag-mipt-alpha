@@ -2,13 +2,13 @@ import logging
 
 from langchain_core.messages import BaseMessage
 
-from src.config import RAGSettings
 from src.prompts import load_text
 from src.rag.utils import build_messages
 from src.types.answer import RAGAnswer
 from src.types.document import DocumentChunk
 from src.types.llm import LLM
 from src.types.retriever import Retriever
+from src.types.search_strategy import SearchStrategy
 from src.types.verifier import VerifierProtocol
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,11 @@ class RAGPipeline:
         self,
         retriever: Retriever,
         llm: LLM,
-        settings: RAGSettings,
+        top_k: int,
+        top_kr: int,
+        strategy: SearchStrategy,
+        prompt_name: str,
+        refusal_text_name: str,
         verifier: VerifierProtocol | None = None,
     ) -> None:
         """
@@ -31,12 +35,20 @@ class RAGPipeline:
 
         :param retriever: Retriever used to fetch supporting chunks.
         :param llm: LLM used to generate the final answer.
-        :param settings: RAG pipeline settings.
+        :param top_k: Number of candidates fetched before reranking.
+        :param top_kr: Number of chunks kept after reranking.
+        :param strategy: Search strategy passed to the retriever.
+        :param prompt_name: Prompt template used to render the answer.
+        :param refusal_text_name: Text returned when the verifier rejects the chunks.
         :param verifier: Optional relevance verifier; when set, gates generation.
         """
         self._retriever = retriever
         self._llm = llm
-        self._settings = settings
+        self._top_k = top_k
+        self._top_kr = top_kr
+        self._strategy = strategy
+        self._prompt_name = prompt_name
+        self._refusal_text_name = refusal_text_name
         self._verifier = verifier
 
     def answer(self, query: str) -> RAGAnswer:
@@ -48,7 +60,7 @@ class RAGPipeline:
         """
         chunks = self._retrieve(query)
         if not self._is_relevant(query, chunks):
-            text = load_text(self._settings.refusal_text_name)
+            text = load_text(self._refusal_text_name)
             return RAGAnswer(text=text, chunks=chunks)
         messages = self._render_messages(query, chunks)
         text = self._llm.invoke(messages)
@@ -71,7 +83,7 @@ class RAGPipeline:
         ]
         accepted_texts = self._llm.invoke_batch(accepted_batches) if accepted_batches else []
 
-        refusal = load_text(self._settings.refusal_text_name)
+        refusal = load_text(self._refusal_text_name)
         answers: list[RAGAnswer] = []
         cursor = 0
         for i, ok in enumerate(passes):
@@ -98,9 +110,9 @@ class RAGPipeline:
         """
         return self._retriever.search(
             query=query,
-            top_k=self._settings.top_k,
-            top_kr=self._settings.top_kr,
-            strategy=self._settings.strategy,
+            top_k=self._top_k,
+            top_kr=self._top_kr,
+            strategy=self._strategy,
         )
 
     def _render_messages(self, query: str, chunks: list[DocumentChunk]) -> list[BaseMessage]:
@@ -111,7 +123,7 @@ class RAGPipeline:
         :param chunks: Chunks to embed into the context slot.
         :return: Chat messages ready for the LLM.
         """
-        return build_messages(query, chunks, self._settings.prompt_name)
+        return build_messages(query, chunks, self._prompt_name)
 
     def _is_relevant(self, query: str, chunks: list[DocumentChunk]) -> bool:
         """

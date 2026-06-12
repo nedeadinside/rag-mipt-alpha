@@ -13,6 +13,27 @@ from cmd.flags import (
 from cmd.subcommands import generate, ingest, rag, rerank, retrieve, verify
 
 
+def _add_rag_parser(sub: argparse._SubParsersAction) -> None:
+    """
+    Register the end-to-end RAG subcommand.
+
+    :param sub: Subparser action receiving the command.
+    """
+    p_rag = sub.add_parser("rag", help="One-pass end-to-end RAG over a questions CSV.")
+    add_ingestion_flags(p_rag)
+    add_embedding_flags(p_rag)
+    add_retrieval_flags(p_rag)
+    add_llm_flags(p_rag)
+    add_rag_flags(p_rag)
+    p_rag.add_argument("--questions", type=Path, required=True, help="Input CSV with q_id,query.")
+    p_rag.add_argument("--output", type=Path, required=True, help="Destination submission JSONL.")
+    p_rag.add_argument(
+        "--limit", type=int, default=None, help="Dev: process only first N questions."
+    )
+    p_rag.add_argument("--batch-size", type=int, default=1, help="LLM batch size.")
+    p_rag.set_defaults(func=rag.run)
+
+
 def _build_parser() -> argparse.ArgumentParser:
     """
     Build the top-level argument parser with all subcommands.
@@ -50,6 +71,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p_retrieve.add_argument(
         "--limit", type=int, default=None, help="Process only first N questions."
     )
+    p_retrieve.add_argument(
+        "--batch-size", type=int, default=16, help="Questions bundled into one expansion call."
+    )
     p_retrieve.set_defaults(func=retrieve.run)
 
     p_rerank = sub.add_parser(
@@ -59,6 +83,9 @@ def _build_parser() -> argparse.ArgumentParser:
     add_rag_flags(p_rerank)
     p_rerank.add_argument("--input", type=Path, required=True, help="JSONL from the retrieve stage.")
     p_rerank.add_argument("--output", type=Path, required=True, help="Destination JSONL.")
+    p_rerank.add_argument(
+        "--batch-size", type=int, default=32, help="Records bundled into one scoring pass."
+    )
     p_rerank.set_defaults(func=rerank.run)
 
     p_verify = sub.add_parser(
@@ -68,6 +95,9 @@ def _build_parser() -> argparse.ArgumentParser:
     add_rag_flags(p_verify)
     p_verify.add_argument("--input", type=Path, required=True, help="JSONL from the rerank stage.")
     p_verify.add_argument("--output", type=Path, required=True, help="Destination JSONL.")
+    p_verify.add_argument(
+        "--batch-size", type=int, default=16, help="Records bundled into one verification call."
+    )
     p_verify.set_defaults(func=verify.run)
 
     p_generate = sub.add_parser(
@@ -82,21 +112,7 @@ def _build_parser() -> argparse.ArgumentParser:
     p_generate.add_argument("--batch-size", type=int, default=1, help="LLM batch size.")
     p_generate.set_defaults(func=generate.run)
 
-    p_rag = sub.add_parser("rag", help="One-pass end-to-end RAG over a questions CSV.")
-    add_ingestion_flags(p_rag)
-    add_embedding_flags(p_rag)
-    add_retrieval_flags(p_rag)
-    add_llm_flags(p_rag)
-    add_rag_flags(p_rag)
-    p_rag.add_argument("--questions", type=Path, required=True, help="Input CSV with q_id,query.")
-    p_rag.add_argument(
-        "--output", type=Path, required=True, help="Destination submission JSONL."
-    )
-    p_rag.add_argument(
-        "--limit", type=int, default=None, help="Dev: process only first N questions."
-    )
-    p_rag.add_argument("--batch-size", type=int, default=1, help="LLM batch size.")
-    p_rag.set_defaults(func=rag.run)
+    _add_rag_parser(sub)
 
     return parser
 

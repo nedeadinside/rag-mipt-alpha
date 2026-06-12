@@ -14,7 +14,6 @@ from qdrant_client.models import (
     VectorParams,
 )
 
-from src.config import RetrievalSettings
 from src.types.document import DocumentChunk
 from src.types.embedder import Embedder
 
@@ -210,7 +209,7 @@ class LocalHybridQdrantStore(LocalQdrantBase):
         path: str,
         dense: Embedder[list[float]],
         sparse: Embedder[SparseVector],
-        retrieval: RetrievalSettings,
+        prefetch_limit: int,
     ) -> None:
         """
         Initialize the store.
@@ -218,12 +217,12 @@ class LocalHybridQdrantStore(LocalQdrantBase):
         :param path: Storage directory path.
         :param dense: Dense embedder.
         :param sparse: Sparse embedder.
-        :param retrieval: Retrieval settings.
+        :param prefetch_limit: Per-vector prefetch candidate cap used in fusion search.
         """
         super().__init__(path)
         self._dense = dense
         self._sparse = sparse
-        self._retrieval = retrieval
+        self._prefetch_limit = prefetch_limit
 
     def _ensure_collection(self, name: str) -> None:
         """
@@ -282,10 +281,9 @@ class LocalHybridQdrantStore(LocalQdrantBase):
         """
         self._assert_exists(collection)
 
-        prefetch_limit = self._retrieval.prefetch_limit
         prefetches = [
-            self._dense_prefetch(self._dense.embed_query(query), prefetch_limit),
-            self._sparse_prefetch(self._sparse.embed_query(query), prefetch_limit),
+            self._dense_prefetch(self._dense.embed_query(query), self._prefetch_limit),
+            self._sparse_prefetch(self._sparse.embed_query(query), self._prefetch_limit),
         ]
         return self._rrf_search(collection, prefetches, top_k)
 
@@ -302,14 +300,13 @@ class LocalHybridQdrantStore(LocalQdrantBase):
         """
         self._assert_exists(collection)
 
-        prefetch_limit = self._retrieval.prefetch_limit
         prefetches: list[Prefetch] = []
 
         embedded_sparse = self._sparse.embed_queries(queries)
         embedded_dense = self._dense.embed_queries(queries)
 
         for eqs, eqd in zip(embedded_sparse, embedded_dense, strict=True):
-            prefetches.append(self._sparse_prefetch(eqs, prefetch_limit))
-            prefetches.append(self._dense_prefetch(eqd, prefetch_limit))
+            prefetches.append(self._sparse_prefetch(eqs, self._prefetch_limit))
+            prefetches.append(self._dense_prefetch(eqd, self._prefetch_limit))
 
         return self._rrf_search(collection, prefetches, top_k)
