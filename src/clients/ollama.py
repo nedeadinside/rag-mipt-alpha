@@ -2,6 +2,7 @@ from typing import TypeVar
 
 from langchain_core.exceptions import OutputParserException
 from langchain_core.messages import BaseMessage
+from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain_ollama import ChatOllama
 from pydantic import BaseModel
 
@@ -32,16 +33,25 @@ class OllamaLLM:
         :param top_p: Nucleus sampling cutoff; None keeps server default.
         :param top_k: Top-k sampling cutoff; None keeps server default.
         """
+
+        pause_seconds = 0.9
+
+        rate_limiter = InMemoryRateLimiter(
+            requests_per_second=1.0 / pause_seconds,
+            check_every_n_seconds=0.05,
+            max_bucket_size=1,
+        )
         kwargs: dict[str, object] = {
             "model": model_name,
             "base_url": base_url,
             "temperature": temperature,
+            "rate_limiter": rate_limiter,
         }
         if top_p is not None:
             kwargs["top_p"] = top_p
         if top_k is not None:
             kwargs["top_k"] = top_k
-        self._model = ChatOllama(**kwargs)
+        self._model = ChatOllama(**kwargs).with_config({"max_concurrency": 1})
 
     @llm_retry()
     def invoke(self, messages: list[BaseMessage]) -> str:
